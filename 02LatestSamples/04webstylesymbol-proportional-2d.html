@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>比例大小的webstylesymbol</title>
+    <link rel="stylesheet" href="/arcgis_js_api/library/4.12/esri/css/main.css">
+    <script src="/arcgis_js_api/library/4.12/init.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+    }
+</style>
+
+<body>
+    <div id="viewDiv" class="esri-widget"></div>
+</body>
+
+</html>
+<script>
+    require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/symbols/WebStyleSymbol"
+    ], function (Map, MapView, FeatureLayer, WebStyleSymbol) {
+        const map = new Map({
+            basemap: "gray-vector"
+        });
+        const view = new MapView({
+            map: map,
+            container: "viewDiv",
+            center: [-98, 40],
+            zoom: 4
+        });
+        var layer = new FeatureLayer({
+            portalItem: { id: "a7c5a8c8ea42416e8bd92df9872cc51b" }
+        });
+        layer
+            .load()
+            .then(updateRenderer)
+            .catch(rejection);
+        function updateRenderer() {
+            let renderer = layer.renderer.clone();
+            console.log(renderer.classBreakInfos);
+            var cb = renderer.classBreakInfos[0];
+            cb.symbol = new WebStyleSymbol({
+                name: "school",
+                styleName: "Esri2DPointSymbolsStyle"
+            });
+            layer.renderer = renderer;
+            map.add(layer);
+        }
+        function rejection(error) {
+            console.log("Layer failed to load: ", error);
+        }
+    })
+</script>
