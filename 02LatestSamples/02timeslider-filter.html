@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>时间过滤</title>
+    <link rel="stylesheet" href="/arcgis_js_api/library/4.12/esri/css/main.css">
+    <script src="/arcgis_js_api/library/4.12/init.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+    }
+
+    #timeSlider {
+        position: absolute;
+        left: 100px;
+        right: 100px;
+        bottom: 30px;
+    }
+
+    #infoDiv {
+        height: 200px;
+        padding: 10px;
+        width: 280px;
+    }
+
+    #infoDiv span {
+        color: #f9c653;
+        font-size: 12pt;
+        font-weight: bolder;
+    }
+</style>
+
+<body>
+    <div id="viewDiv"></div>
+    <div id="timeSlider"></div>
+    <div id="infoDiv" class="esri-widget">
+        <div><b>USGS Earthquakes</b></div>
+        <br />
+        <div id="statsDiv" class="esri-widget"></div>
+    </div>
+</body>
+
+</html>
+<script>
+    require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/GeoJSONLayer",
+        "esri/widgets/TimeSlider",
+        "esri/widgets/Expand",
+        "esri/widgets/Legend"
+    ], function (Map, MapView, GeoJSONLayer, TimeSlider, Expand, Legend) {
+        let layerView;
+        const layer = new GeoJSONLayer({
+            url: "https://bsvensson.github.io/various-tests/geojson/usgs-earthquakes-06182019.geojson",
+            copyright: "USGS Earthquakes",
+            title: "USGS Earthquakes",
+            timeInfo: {
+                startField: 'time',
+                interval: {
+                    unit: "days",
+                    value: 1
+                }
+            },
+            renderer: {
+                type: 'simple',
+                field: "mag",
+                symbol: {
+                    type: "simple-marker",
+                    color: "orange",
+                    outline: null
+                },
+                // visualVariables属性https://developers.arcgis.com/javascript/latest/api-reference/esri-renderers-SimpleRenderer.html#visualVariables
+                visualVariables: [
+                    {
+                        type: 'size',
+                        field: "mag",
+                        stops: [
+                            {
+                                value: 1,
+                                size: "5px"
+                            },
+                            {
+                                value: 2,
+                                size: "15"
+                            },
+                            {
+                                value: 3,
+                                size: "35"
+                            }
+                        ]
+                    },
+                    {
+                        type: 'color',
+                        field: "depth",
+                        stops: [
+                            {
+                                value: 2.5,
+                                color: "#F9C653",
+                                label: "<2km"
+                            },
+                            {
+                                value: 3.5,
+                                color: "#F8864D",
+                                label: "3km"
+                            },
+                            {
+                                value: 4,
+                                color: "#C53C06",
+                                label: ">4km"
+                            }
+                        ]
+                    }
+                ]
+            },
+            // popupTemplate https://developers.arcgis.com/javascript/latest/api-reference/esri-PopupTemplate.html#constructors-summary
+            popupTemplate: {
+                title: "{title}",
+                content: [
+                    {
+                        type: "fields",
+                        fieldInfos: [
+                            {
+                                fieldName: "place",
+                                label: "地理位置",
+                                visible: true
+                            },
+                            {
+                                fieldName: "mag",
+                                label: "震级",
+                                visible: true
+                            },
+                            {
+                                fieldName: "depth",
+                                label: "震源深度",
+                                visible: true
+                            }
+                        ]
+                    }
+                ]
+            }
+        })
+        const map = new Map({
+            basemap: "dark-gray",
+            layers: [layer]
+        });
+        var view = new MapView({
+            map: map,
+            container: "viewDiv",
+            zoom: 14,
+            center: [-117.50268, 34.04713]
+        });
+
+        // 创建时间小部件
+        const timeSlider = new TimeSlider({
+            container: "timeSlider",
+            playRate: 50,   // 每一帧间隔时间
+            stops: {
+                interval: {
+                    value: 1,
+                    unit: "hours"
+                }
+            }
+        });
+        view.ui.add(timeSlider, "manual");
+        view.whenLayerView(layer).then(function (lv) {
+            layerView = lv;
+            const start = new Date(2019, 4, 25)
+            timeSlider.fullTimeExtent = {
+                start: start,
+                end: layer.timeInfo.fullTimeExtent.end
+            }
+            const end = new Date(start);
+            end.setDate(end.getDate() + 1);
+            timeSlider.values = [start, end];
+        })
+        timeSlider.watch("timeExtent", function (value) {
+            layer.definitionExpression =
+                "time <= " + timeSlider.timeExtent.end.getTime();
+
+            layerView.effect = {
+                filter: {
+                    timeExtent: timeSlider.timeExtent,
+                    geometry: view.extent
+                },
+                excludedEffect: "grayscale(20%) opacity(12%)"
+            };
+        });
+    })
+</script>
