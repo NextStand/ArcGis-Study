@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>时间轴</title>
+    <link rel="stylesheet" href="/arcgis_js_api/library/4.12/esri/css/main.css">
+    <script src="/arcgis_js_api/library/4.12/init.js"></script>
+</head>
+<style>
+    html,
+    body,
+    #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+    }
+
+    #timeSlider {
+        position: absolute;
+        left: 100px;
+        right: 100px;
+        bottom: 20px;
+    }
+
+    #titleDiv {
+        padding: 10px;
+        font-weight: 36;
+        text-align: center;
+    }
+</style>
+
+<body>
+    <div id="viewDiv"></div>
+    <div id="timeSlider"></div>
+    <div id="titleDiv" class="esri-widget">
+        <div id="titleText">海面温度</div>
+    </div>
+</body>
+
+</html>
+<script>
+    require([
+        "esri/WebMap",
+        "esri/views/MapView",
+        "esri/layers/ImageryLayer",
+        "esri/widgets/TimeSlider"
+    ], function (Map, MapView, ImageryLayer, TimeSlider) {
+        const layer = new ImageryLayer({
+            url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/ScientificData/SeaTemperature/ImageServer"
+        })
+
+        const map = new Map({
+            basemap: 'satellite',
+            layers: [layer]
+        })
+
+        const view = new MapView({
+            map: map,
+            container: "viewDiv",
+            zoom: 3,
+            center: [-45, 30]
+        })
+
+        // 时间轴控件
+        const timeSlider = new TimeSlider({
+            container: 'timeSlider',
+            mode: 'time-window',
+            view: view
+        })
+        view.ui.add(timeSlider, 'manual')
+        view.ui.add("titleDiv", "top-right");
+        view.whenLayerView(layer).then(function (lv) {
+            const fullTimeExtent = layer.timeInfo.fullTimeExtent;
+            console.log(layer.timeInfo);
+            timeSlider.fullTimeExtent = fullTimeExtent;
+            timeSlider.stops = {
+                interval: layer.timeInfo.interval
+            };
+        })
+    })
+</script>
